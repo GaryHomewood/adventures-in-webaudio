@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="">
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="x-ua-compatible" content="ie=edge">
+        <title></title>
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/0.5.7/p5.min.js"></script>
+        <script>
+        var MIC = (() => {
+            let FFT_SIZE = 1024;
+            let context = new (window.AudioContext || window.webkitAudioContext)();
+            let SAMPLE_RATE = context.sampleRate;
+
+            var spectrum = [];
+            var volume = 0;
+            var vol = 0;
+            var peak_volume = 0;
+            var rms = 0;
+
+            function processSound(stream) {
+                // analyser extracts frequency, waveform, etc.
+                var analyser = context.createAnalyser();
+                analyser.smoothingTimeConstant = 0.2;
+                analyser.fftSize = FFT_SIZE;
+
+                var node = context.createScriptProcessor(FFT_SIZE * 2, 1, 1);
+
+                node.onaudioprocess = function () {
+                    // bitcount returns array which is half the FFT_SIZE
+                    spectrum = new Uint8Array(analyser.frequencyBinCount);
+
+                    // getByteFrequencyData returns amplitude for each bin
+                    analyser.getByteFrequencyData(spectrum);
+
+                    // getByteTimeDomainData gets volumes over the sample time
+                    // analyser.getByteTimeDomainData(self.spectrum);
+
+                    vol = getRMS(spectrum);
+                    // get peak - a hack when our volumes are low
+                    if (vol > peak_volume) peak_volume = vol;
+                    volume = vol;
+                };
+
+                var input = context.createMediaStreamSource(stream);
+                input.connect(analyser);
+                analyser.connect(node);
+                node.connect(context.destination);
+            }
+
+            function getRMS(spectrum) {
+                // RMS: root mean square, sum of all the volumes of all the frequency
+                // spectrum squared
+                for (var i = 0; i < spectrum.length; i++) {
+                    rms += spectrum[i] * spectrum[i];
+                }
+
+                rms /= spectrum.length;
+                rms = Math.sqrt(rms);
+                return rms;
+            }
+
+            return {
+                init: () => {
+                    try {
+                        navigator.getUserMedia({audio: true}, processSound, function() {});
+                    } catch (e) {
+                        console.error(e);
+                    }
+                },
+                getSpectrum: () => {
+                    return spectrum;
+                },
+                getVolume: () => {
+                    return rms;
+                }
+            };
+        })();
+
+        var w = 800;
+        var h = 1000;
+        var volHistory = [];
+        var from;
+        var to;
+
+        function setup() {
+            createCanvas(800, 600);
+            MIC.init();
+            from = color('rgb(0, 0, 200)');
+            to = color('rgb(255, 0, 0)');
+        }
+
+        function draw() {
+            background('#fff')
+
+            // keep track of the volume
+            var vol = MIC.getVolume();
+            volHistory.unshift(vol);
+            if (volHistory.length > 600) {
+                volHistory.pop();
+            }
+
+            var volY = 150;
+            stroke(220);
+            line(0, volY, windowWidth, volY);
+            stroke(220);
+            for (var i = 0; i < volHistory.length; i++) {
+                var v = volHistory[i];
+                if (i % 2) {
+                    noStroke();
+                    fill(lerpColor(from, to, v/200))
+                    rect(1000 - (i * 4), volY - v, 2, v * 2);
+                }
+            }
+
+            var spectrumY = 450;
+            stroke(220);
+            line(0, spectrumY, windowWidth, spectrumY);
+            stroke(220);
+            for (var i = 0; i < 400; i++) {
+                var s = map(MIC.getSpectrum()[i], 0, 300, 0, 200);
+
+                if (s > 0) {
+                    noStroke();
+                    fill(lerpColor(from, to, s/200))
+                    rect(7 * i, spectrumY - s, 2, s * 2);
+                }
+            }
+        }
+        </script>
+    </head>
+    <body>
+    </body>
+</html>

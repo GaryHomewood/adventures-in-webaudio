@@ -1,0 +1,154 @@
+<!doctype html>
+<html lang="">
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="x-ua-compatible" content="ie=edge">
+        <title></title>
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/0.5.7/p5.min.js"></script>
+        <script>
+        var MIC = (() => {
+            let FFT_SIZE = 1024;
+            let context = new (window.AudioContext || window.webkitAudioContext)();
+            let SAMPLE_RATE = context.sampleRate;
+
+            var spectrum = [];
+            var volume = 0;
+            var vol = 0;
+            var peak_volume = 0;
+            var rms = 0;
+
+            function processSound(stream) {
+                // analyser extracts frequency, waveform, etc.
+                var analyser = context.createAnalyser();
+                analyser.smoothingTimeConstant = 0.2;
+                analyser.fftSize = FFT_SIZE;
+
+                var node = context.createScriptProcessor(FFT_SIZE * 2, 1, 1);
+
+                node.onaudioprocess = function () {
+                    // bitcount returns array which is half the FFT_SIZE
+                    spectrum = new Uint8Array(analyser.frequencyBinCount);
+
+                    // getByteFrequencyData returns amplitude for each bin
+                    analyser.getByteFrequencyData(spectrum);
+
+                    // getByteTimeDomainData gets volumes over the sample time
+                    // analyser.getByteTimeDomainData(self.spectrum);
+
+                    vol = getRMS(spectrum);
+                    // get peak - a hack when our volumes are low
+                    if (vol > peak_volume) peak_volume = vol;
+                    volume = vol;
+                };
+
+                var input = context.createMediaStreamSource(stream);
+                input.connect(analyser);
+                analyser.connect(node);
+                node.connect(context.destination);
+            }
+
+            function getRMS(spectrum) {
+                // RMS: root mean square, sum of all the volumes of all the frequency
+                // spectrum squared
+                for (var i = 0; i < spectrum.length; i++) {
+                    rms += spectrum[i] * spectrum[i];
+                }
+
+                rms /= spectrum.length;
+                rms = Math.sqrt(rms);
+                return rms;
+            }
+
+            return {
+                init: () => {
+                    try {
+                        navigator.getUserMedia({audio: true}, processSound, function() {});
+                    } catch (e) {
+                        console.error(e);
+                    }
+                },
+                getSpectrum: () => {
+                    return spectrum;
+                },
+                getVolume: () => {
+                    return rms;
+                }
+            };
+        })();
+
+        var w = 800;
+        var h = 1000;
+        var volHistory = [];
+        var from;
+        var to;
+
+        var previousValue = 0;
+        var specHistory = [];
+        var barSize = 5;
+
+        function setup() {
+          createCanvas(800, 600, WEBGL)
+          MIC.init()
+          frameRate(10)
+        }
+
+        function draw() {
+          rotateX(0.8);
+          rotateY(-0.4);
+          orbitControl();
+
+          //background(25,25,25)
+          this.drawingContext.clearRect(0 , 0, w, h);
+
+
+
+          var dirY = (mouseY / height - 0.5) *2;
+          var dirX = (mouseX / width - 0.5) *2;
+          directionalLight(255, 255, 255, dirX, -dirY, 2.25);
+          ambientMaterial(0,0,200);
+
+          translate(-300, -100, 350);
+          var spec = MIC.getSpectrum();
+          if (spec.length > 0) {
+            specHistory.unshift(spec);
+            if (specHistory.length > 50) {
+              specHistory.pop();
+            }
+
+            specHistory.forEach((s) => {
+              translate(0, 0, -barSize * 2);
+              push();
+              beginShape()
+              var i = 0
+              s.forEach((se) => {
+                if (i < 75) {
+                translate(barSize + 5, 0, 0);
+                push();
+                translate(0, -se/2, 0)
+                vertex(0,-se,0);
+                pop();
+
+                if (se > 0) {
+                  // align to common y
+                  push()
+                  translate(0, -se/2, 0)
+                  //vertex(se,0,0);
+                  box(barSize, se, barSize);
+                  pop();
+                }
+                }
+                i++
+              });
+              endShape();
+              pop();
+            });
+          }
+        }
+        </script>
+    </head>
+    <body>
+    </body>
+</html>

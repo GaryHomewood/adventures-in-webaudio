@@ -1,0 +1,59 @@
+$heading-color: hotpink;
+$bg: #222;
+
+h1 {
+	color: $heading-color;
+}
+
+body {
+	font-family: Roboto, sans-serif;
+	margin: 0;
+	padding: 0;
+}
+
+.reveal {
+	.slides {
+		text-align: left;
+		img {
+			border: none;
+			box-shadow: none;
+		}
+
+		.fl-logo {
+			width: 150px;
+			box-shadow: none;
+			display: block;
+			margin-bottom: 50px;
+		}
+		section[data-background-image] {
+			h3, p {
+			color: #fff;
+			}
+		}
+		section.centred {
+			text-align: center;
+		}
+	}
+	h1 {
+		font-family: Roboto, sans-serif;
+	}
+}
+
+.intro p {
+	color: #fff;
+}
+
+.intro-bg-left {
+	background-color:$bg;
+	width:50%;
+	height:100%;
+	position:absolute;
+}
+
+.intro-bg-right {
+	width:50%;height:100vh;float:right;
+}
+
+iframe {
+	overflow: hidden;
+}

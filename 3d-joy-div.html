@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="">
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="x-ua-compatible" content="ie=edge">
+        <title></title>
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/0.5.7/p5.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/0.5.8/addons/p5.sound.min.js"></script>
+        <script>
+        // jshint esnext:true
+        let mic
+        let fft
+        let specHistory = []
+
+        function setup() {
+          createCanvas(800, 600, WEBGL)
+          noFill()
+
+          mic = new p5.AudioIn()
+          mic.start()
+
+          fft = new p5.FFT()
+          fft.setInput(mic)
+          frameRate(20)
+        }
+
+        function draw() {
+          //background('#161712')
+          this.drawingContext.clearRect(0 , 0, 800, 600);
+
+          rotateX(0.8)
+          rotateY(0)
+          rotateZ(0)
+          orbitControl()
+          translate(-350, 350, 0)
+
+          var spec = fft.analyze()
+
+          if (spec.length > 0) {
+            // store a history of the spectrum over time
+            specHistory.unshift(spec);
+            if (specHistory.length > 150) {
+              specHistory.pop()
+            }
+
+            specHistory.forEach((spectrum) => {
+              translate(0, 0, -8)
+              var x = 0
+
+              beginShape()
+              // adjust line opacity for mobile vs desktop
+              if (typeof window.orientation !== 'undefined') {
+                // mobile
+                fill('rgba(240, 240, 240, 1)')
+              } else {
+                // desktop
+                fill('rgba(240, 240, 240, 0.5)')
+              }
+              stroke(240)
+
+              for (let spectrumValue of spectrum) {
+                vertex(x, -spectrumValue, 0)
+                x+=10
+                if (x > 690) {
+                  break
+                }
+              }
+              endShape()
+            })
+          }
+        }
+        </script>
+    </head>
+    <body>
+    </body>
+</html>

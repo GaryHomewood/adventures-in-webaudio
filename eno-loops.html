@@ -1,0 +1,287 @@
+<!doctype html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="x-ua-compatible" content="ie=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>ENO</title>
+    <meta name="description" content="">
+    <style type="text/css">
+body {
+    margin: 0;
+    padding: 0;
+}
+#content {
+    height: 100vh;
+    background: linear-gradient(#350801, #a91904);
+}
+#content {
+    display: flex;
+    height: 100vh;
+    justify-content: center;
+    align-items: center;
+}
+button {
+    font-size: 1.1em;
+    width: 48px;
+    height: 48px;
+    color: #fff;
+    background-color: #333;
+    border: none;
+    margin-left: 4px;
+    -webkit-transition-duration: 0.4s; /* Safari */
+    transition-duration: 0.4s;
+    cursor: pointer;
+    padding: 0;
+    float: left;
+}
+button:hover {
+    background-color: #000
+}
+/* The switch - the box around the slider */
+.switch {
+    position: relative;
+    display: inline-block;
+    width: 60px;
+    height: 34px;
+    top: 8px;
+}
+
+/* Hide default HTML checkbox */
+.switch input {display:none;}
+
+/* The slider */
+.slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #ccc;
+    -webkit-transition: .4s;
+    transition: .4s;
+}
+
+.slider:before {
+    position: absolute;
+    content: "";
+    height: 26px;
+    width: 26px;
+    left: 4px;
+    bottom: 4px;
+    background-color: white;
+    -webkit-transition: .4s;
+    transition: .4s;
+}
+
+input:checked + .slider {
+    background-color: #000;
+}
+
+input:focus + .slider {
+    box-shadow: 0 0 1px #2196F3;
+}
+
+input:checked + .slider:before {
+    -webkit-transform: translateX(26px);
+    -ms-transform: translateX(26px);
+    transform: translateX(26px);
+}
+
+/* Rounded sliders */
+.slider.round {
+    border-radius: 34px;
+}
+
+.slider.round:before {
+    border-radius: 50%;
+}
+label {
+    color: #eee;
+    font-family: Helvetica;
+    margin-left: 4px;
+}
+.rows {
+    width: 418px;
+}
+.row {
+    height: 44px;
+    margin-bottom: 40px;
+}
+    </style>
+</head>
+<body>
+    <div id="content">
+        <div class="rows">
+            <div class="row">
+                <button onclick="playNote(notes.F2, 2)">F</button>
+                <button onclick="playNote(notes.Ab2, 2)">A&#x266d;</button>
+                <button onclick="playNote(notes.C3, 2)">C'</button>
+                <button onclick="playNote(notes.Db3, 2)">D&#x266d;'</button>
+                <button onclick="playNote(notes.Eb3, 2)">E&#x266d;'</button>
+                <button onclick="playNote(notes.F3, 2)">F'</button>
+                <button onclick="playNote(notes.Ab3, 2)">A&#x266d;'</button>
+                <button id="play-button">
+                    <img id="play-icon" src="assets/play-white.svg"/>
+                 </button>
+             </div>
+             <div class="row">
+                 <label>REVERB</label>
+                 <label class="switch">
+                     <input id="add-reverb" type="checkbox" onclick="addReverb = this.checked">
+                     <div class="slider round"></div>
+                 </label>
+            </div>
+        </div>
+    </div>
+<svg id="play" fill="#FFFFFF" height="48" viewbox="0 0 24 24" width="48" xmlns="http://www.w3.org/2000/svg">
+    <path d="M0 0h24v24H0z" fill="none"/>
+    <path d="M10 16.5l6-4.5-6-4.5v9zM12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z"/>
+</svg>
+<svg id="pause" fill="#FFFFFF" height="48" viewbox="0 0 24 24" width="48" xmlns="http://www.w3.org/2000/svg">
+    <path d="M0 0h24v24H0z" fill="none"/>
+    <path d="M9 16h2V8H9v8zm3-14C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm1-4h2V8h-2v8z"/>
+</svg>
+</body>
+<script src="http://reverbjs.org/reverb.js"></script>
+<script>
+// jshint esnext: true
+var isPlaying = false;
+let notes = {
+    "F2": 87.307057,
+    "Ab2": 103.826174,
+    "C3": 130.812782,
+    "Db3": 138.591315,
+    "Eb3": 155.563491,
+    "F3": 174.614115,
+    "Ab3": 207.652348
+};
+
+let audioContext = new (window.AudioContext || window.webkitAudioContext)();
+reverbjs.extend(audioContext);
+
+var reverbUrl = "http://reverbjs.org/Library/HamiltonMausoleum.m4a";
+var reverbNode = audioContext.createReverbFromUrl(reverbUrl, function() {
+    reverbNode.connect(audioContext.destination);
+});
+var addReverb = false;
+let pauseSrc = 'data:image/svg+xml;base64,' + window.btoa(document.getElementById('pause').outerHTML);
+let playSrc = 'data:image/svg+xml;base64,' + window.btoa(document.getElementById('play').outerHTML);
+
+document.getElementById("play-button").addEventListener('click', function(e) {
+    var buttonImageSrc = this.firstElementChild.src;
+
+    if (isPlaying === true) {
+        isPlaying = false;
+        stopLoops();
+        this.firstElementChild.src = playSrc;
+    } else {
+        isPlaying = true;
+
+        // start off notes to be played
+        setTimeout(() => { playLoop(notes.F2, randomLoopLength()); }, 0);
+        setTimeout(() => { playLoop(notes.Ab2, randomLoopLength()); }, 4000);
+        setTimeout(() => { playLoop(notes.C3, randomLoopLength()); }, 12500);
+        setTimeout(() => { playLoop(notes.Db3, randomLoopLength()); }, 7000);
+        setTimeout(() => { playLoop(notes.Eb3, randomLoopLength()); }, 195000);
+        setTimeout(() => { playLoop(notes.F3, randomLoopLength()); }, 16500);
+        setTimeout(() => { playLoop(notes.Ab3, randomLoopLength()); }, 23000);
+
+        this.firstElementChild.src = pauseSrc;
+    }
+});
+
+function playLoop(note, loopLength) {
+    // play a note on a loop
+    play(note);
+    setInterval(() => { play(note); }, loopLength);
+}
+
+function stopLoops() {
+    for (var i = 1; i < 99999; i++) {
+        window.clearInterval(i);
+    }
+}
+
+function randomStart() {
+    var start = Number.random(2, 20, 0) * 1000;
+    return start;
+}
+
+function randomLoopLength() {
+    var start = Number.random(15, 25, 1) * 1000;
+    return Number(start);
+}
+
+function playNote(freq, duration) {
+    let source = audioContext.createOscillator();
+    let now = audioContext.currentTime;
+
+    source.type = 'sine';
+    source.frequency.setValueAtTime(freq, audioContext.currentTime);
+
+    let amp = audioContext.createGain();
+    amp.gain.value = 0;
+    amp.gain.linearRampToValueAtTime(0.1, now + 1);
+    amp.gain.linearRampToValueAtTime(0, Number(now) + Number(duration));
+
+    if (addReverb === true) {
+        source.connect(amp)
+        amp.connect(reverbNode)
+    } else {
+        source.connect(amp);
+        amp.connect(audioContext.destination);
+    }
+
+    source.start();
+    source.stop(Number(now) + Number(duration) + 0.1);
+}
+
+function play(freq) {
+    let randomNoteDuration = Number.random(3, 5, 1)
+    playNote(freq, randomNoteDuration)
+}
+
+function impulseResponse( duration, decay, reverse ) {
+    var sampleRate = audioContext.sampleRate;
+    var length = sampleRate * duration;
+    var impulse = audioContext.createBuffer(2, length, sampleRate);
+    var impulseL = impulse.getChannelData(0);
+    var impulseR = impulse.getChannelData(1);
+
+    if (!decay)
+        decay = 2.0;
+
+    for (var i = 0; i < length; i++){
+        var n = reverse ? length - i : i;
+        impulseL[i] = (Math.random() * 2 - 1) * Math.pow(1 - n / length, decay);
+        impulseR[i] = (Math.random() * 2 - 1) * Math.pow(1 - n / length, decay);
+    }
+    return impulse;
+}
+
+/**
+ * Return a random number in a range with a specified precision
+ *
+ */
+Number.random = function(minimum, maximum, precision) {
+    var random = Math.random() * (maximum - minimum + 1) + minimum;
+    return random.toFixed(precision);
+};
+
+function playSound(buffer, atTime) {
+    var player = audioContext.createBufferSource();
+    player.buffer = buffer;
+    player.loop = false;
+    player.start(atTime);
+    player.connect(audioContext.destination);
+}
+
+function fetchSample(path) {
+    return fetch(path)
+        .then(response => response.arrayBuffer())
+        .then(arrayBuffer => audioContext.decodeAudioData(arrayBuffer));
+}
+</script>
+</html>

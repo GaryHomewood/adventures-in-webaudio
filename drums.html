@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="mobile-web-app-capable" content="yes">
+
+<style type="text/css">
+body, html {
+    height: 100vh;
+}
+body {
+    font-family: "Helvetica Neue", "Calibri Light", Roboto, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    font-size: 100%;
+    background-color: #444;
+    overflow: hidden;
+}
+legend, label {
+    font-size: 0.8em;
+    color: #222;
+    color: #eee;
+}
+label {
+    display: block;
+    margin-top:10px;
+    text-align: center;
+}
+fieldset {
+    border: 1px solid #888;
+    padding: 10px;
+    background-color: #444;
+    margin: 30px 0 0 0;
+    width: 360px;
+}
+fieldset div {
+    float:left;
+    margin-right: 10px;
+}
+#content {
+    background-color: #444;
+    height: 100vh;
+    overflow: hidden;
+    padding-top: 20px;
+    width: 390px;
+    margin: 0 auto;
+}
+#play-control {
+    width: 360px;
+    display: flex;
+    justify-content: center;
+    padding-top: 20px;
+}
+#matrix1 {
+    width: 350px;
+}
+button {
+    position: relative;
+    outline:none;
+    border: none;
+    background-color: #444;
+    overflow: hidden;
+    cursor: pointer;
+    margin: 20px;
+}
+button img {
+    height: 70px;
+}
+button:focus {
+    outline: none;
+}
+button:after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 5px;
+    height: 5px;
+    background: rgba(255, 255, 255, .5);
+    opacity: 0;
+    border-radius: 100%;
+    transform: scale(1, 1) translate(-50%);
+    transform-origin: 50% 50%;
+}
+@keyframes ripple {
+    0% {
+        transform: scale(0, 0);
+        opacity: 1;
+    }
+    20% {
+        transform: scale(25, 25);
+        opacity: 1;
+    }
+    100% {
+        opacity: 0;
+        transform: scale(40, 40);
+    }
+}
+button:focus:not(:active)::after {
+    animation: ripple 1s ease-out;
+}
+.dial {
+    width: 80px;
+    height: 80px;
+}
+</style>
+</head>
+
+<body>
+    <div id="content">
+        <fieldset>
+            <legend>BEAT MATRIX</legend>
+            <canvas id="matrix1" nx="matrix"></canvas>
+        </fieldset>
+
+        <fieldset>
+            <legend>VOLUME</legend>
+            <div>
+                <canvas class="dial" nx="dial"></canvas>
+                <label>BASS 1</label>
+            </div>
+            <div>
+                <canvas class="dial" nx="dial"></canvas>
+                <label>BASS 2</label>
+            </div>
+            <div>
+                <canvas class="dial" nx="dial"></canvas>
+                <label>TIMPANI</label>
+            </div>
+            <div>
+                <canvas class="dial" nx="dial"></canvas>
+                <label>SNARE</label>
+            </div>
+        </fieldset>
+
+        <div id="play-control">
+            <button id="play-button">
+                <img id="play-icon" src="assets/play-white.svg"/>
+            </button>
+        </div>
+    </div>
+
+<svg id="play" fill="#FFFFFF" height="48" viewbox="0 0 24 24" width="48" xmlns="http://www.w3.org/2000/svg">
+    <path d="M0 0h24v24H0z" fill="none"/>
+    <path d="M10 16.5l6-4.5-6-4.5v9zM12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z"/>
+</svg>
+
+<svg id="pause" fill="#FFFFFF" height="48" viewbox="0 0 24 24" width="48" xmlns="http://www.w3.org/2000/svg">
+    <path d="M0 0h24v24H0z" fill="none"/>
+    <path d="M9 16h2V8H9v8zm3-14C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm1-4h2V8h-2v8z"/>
+</svg>
+<script src='scripts/nexusUI.js'></script>
+<script>
+// jshint esnext: true
+var ctx = window.AudioContext || window.webkitAudioContext;
+var con = new ctx();
+
+var bass1;
+var bass1_amp = con.createGain();
+var bass2;
+var bass2_amp = con.createGain();
+var drum;
+var drum_amp = con.createGain();
+var hi;
+var hi_amp = con.createGain();
+
+var step = 0;
+var interval = 0.25;
+var wait_time = 0.1;
+var got_up_to;
+var isPlaying = false;
+var i;
+
+var beatMatrix = [
+    [0, 0, 0, 0, 0, 0, 0, 0],
+    [0, 0, 0, 0, 0, 0, 0, 0],
+    [0, 0, 0, 0, 0, 0, 0, 0],
+    [0, 0, 0, 0, 0, 0, 0, 0]
+];
+
+nx.onload = function() {
+    //nx.colorize("accent", "#347");
+    // nx.colorize("border", "#bbb");
+    // nx.colorize("fill", "#eee");
+    nx.widgets.matrix1.col = beatMatrix[0].length;
+    nx.widgets.matrix1.row = beatMatrix.length;
+    nx.widgets.matrix1.init();
+    nx.widgets.matrix1.on("*", function(data) {
+        if (data.row >= 0) {
+            beatMatrix[data.row][data.col] = data.level;
+        }
+    });
+
+    nx.widgets.dial1.set({value: 0.5});
+    nx.widgets.dial1.on("*", function(data) {
+        bass1_amp.gain.value = data.value;
+    });
+
+    nx.widgets.dial2.set({value: 0.5});
+    nx.widgets.dial2.on("*", function(data) {
+        bass2_amp.gain.value = data.value;
+    });
+
+    nx.widgets.dial3.set({value: 0.5});
+    nx.widgets.dial3.on("*", function(data) {
+        drum_amp.gain.value = data.value;
+    });
+
+    nx.widgets.dial4.set({value: 0.5});
+    nx.widgets.dial4.on("*", function(data) {
+        hi_amp.gain.value = data.value;
+    });
+};
+
+fetchSample('assets/bass_drum-f.wav').then(buffer => {bass1 = buffer;});
+fetchSample('assets/bass_drum-p.wav').then(buffer => {bass2 = buffer;});
+fetchSample('assets/timpani.wav').then(buffer => {drum = buffer;});
+fetchSample('assets/snare-rh-p.wav').then(buffer => {hi = buffer;});
+
+var isPlaying = false;
+var pauseSrc = 'data:image/svg+xml;base64,' + window.btoa(document.getElementById('pause').outerHTML);
+var playSrc = 'data:image/svg+xml;base64,' + window.btoa(document.getElementById('play').outerHTML);
+
+document.getElementById("play-button").addEventListener('click', function(e) {
+    var buttonImageSrc = this.firstElementChild.src;
+
+    if (isPlaying === true) {
+        isPlaying = false;
+        clearInterval(i);
+        this.firstElementChild.src = playSrc;
+    } else {
+        isPlaying = true;
+        i = setInterval(player, wait_time * 1000);
+        this.firstElementChild.src = pauseSrc;
+    }
+});
+
+function player() {
+    var now = con.currentTime;
+    nx.widgets.matrix1.jumpToCol(step % beatMatrix[0].length);
+    var max_future_time = now + (wait_time * 1.5);
+
+    if (got_up_to > now) {
+        now = got_up_to;
+    }
+
+    while (now <= max_future_time) {
+        step++;
+
+        if (beatMatrix[0][step % beatMatrix[0].length]) {
+            play(now, bass1, bass1_amp);
+        }
+
+        if (beatMatrix[1][step % beatMatrix[1].length]) {
+            play(now, bass2, bass2_amp);
+        }
+
+        if (beatMatrix[2][step % beatMatrix[2].length]) {
+            play(now, drum, drum_amp);
+        }
+
+        if (beatMatrix[3][step % beatMatrix[3].length]) {
+            play(now, hi, hi_amp);
+        }
+
+        now += interval;
+    }
+    got_up_to = now;
+}
+
+function play(time, buff, amp) {
+    var player = con.createBufferSource();
+    player.buffer = buff;
+    player.loop = false;
+    player.connect(amp);
+    amp.connect(con.destination);
+    player.start(time);
+}
+
+function fetchSample(path) {
+    return fetch(path)
+        .then(response => response.arrayBuffer())
+        .then(arrayBuffer => con.decodeAudioData(arrayBuffer));
+}
+</script>
+</body>
+</html>
