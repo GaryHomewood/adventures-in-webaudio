@@ -1,0 +1,203 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="mobile-web-app-capable" content="yes">
+<style type="text/css">
+body, html {
+    height: 100vh;
+}
+body {
+    font-family: "Helvetica Neue", "Calibri Light", Roboto, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    font-size: 100%;
+    margin: 0;
+}
+#content {
+    height: 100vh;
+    overflow: hidden;
+    padding-top: 40px;
+    background: linear-gradient(#091902, #2c770a);
+}
+#tilt-control,
+#play-control {
+    width: 320px;
+    display: flex;
+    justify-content: center;
+    margin: 0 auto;
+}
+#play-control {
+    padding-top: 20px;
+}
+button {
+    position: relative;
+    outline:none;
+    border: none;
+    background-color: #153805;
+    overflow: hidden;
+    cursor: pointer;
+    margin: 20px;
+}
+button img {
+    height: 70px;
+}
+button:focus {
+    outline: none;
+}
+button:after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 5px;
+    height: 5px;
+    background: rgba(255, 255, 255, .5);
+    opacity: 0;
+    border-radius: 100%;
+    transform: scale(1, 1) translate(-50%);
+    transform-origin: 50% 50%;
+}
+@keyframes ripple {
+    0% {
+        transform: scale(0, 0);
+        opacity: 1;
+    }
+    20% {
+        transform: scale(25, 25);
+        opacity: 1;
+    }
+    100% {
+        opacity: 0;
+        transform: scale(40, 40);
+    }
+}
+button:focus:not(:active)::after {
+    animation: ripple 1s ease-out;
+}
+.dial {
+    width: 80px;
+    height: 80px;
+}
+</style>
+</head>
+
+<body>
+    <div id="content">
+        <div id="tilt-control">
+            <canvas nx="tilt" width="240px" height="240px"></canvas>
+        </div>
+        <div id="play-control">
+            <button id="play-button">
+                <img id="play-icon" src="assets/play-white.svg"/>
+            </button>
+        </div>
+    </div>
+
+<svg id="play" fill="#FFFFFF" height="48" viewbox="0 0 24 24" width="48" xmlns="http://www.w3.org/2000/svg">
+    <path d="M0 0h24v24H0z" fill="none"/>
+    <path d="M10 16.5l6-4.5-6-4.5v9zM12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z"/>
+</svg>
+
+<svg id="pause" fill="#FFFFFF" height="48" viewbox="0 0 24 24" width="48" xmlns="http://www.w3.org/2000/svg">
+    <path d="M0 0h24v24H0z" fill="none"/>
+    <path d="M9 16h2V8H9v8zm3-14C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm1-4h2V8h-2v8z"/>
+</svg>
+<script src='scripts/nexusUI.js'></script>
+<script>
+// jshint esnext: true
+let audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+window.addEventListener('unload', function(e) {
+    audioCtx.close();
+});
+
+var isPlaying = false;
+
+class HarmonicSynth {
+    constructor(partialAmplitudes) {
+        this.partials = partialAmplitudes.map(() => audioCtx.createOscillator());
+        this.partialGains = partialAmplitudes.map(() => audioCtx.createGain());
+        this.masterGain = audioCtx.createGain();
+
+        partialAmplitudes.forEach((amp, index) => {
+            this.partialGains[index].gain.value = amp;
+            this.partials[index].type = 'triangle'
+            this.partials[index].connect(this.partialGains[index]);
+            this.partialGains[index].connect(this.masterGain);
+        });
+        this.masterGain.gain.value = 1 / partialAmplitudes.length;
+    }
+
+    connect(dest) {
+        this.masterGain.connect(dest);
+    }
+
+    disconnect() {
+        this.masterGain.disconnect();
+    }
+
+    start(time = 0) {
+        this.partials.forEach(o => o.start(time));
+    }
+
+    stop(time = 0) {
+        this.partials.forEach(o => o.stop(time));
+    }
+
+    setFrequencyAtTime(frequency, time) {
+        this.partials.forEach((o, index) => {
+            o.frequency.setValueAtTime(frequency * (index + 1), time);
+        });
+    }
+
+    exponentialRampToFrequencyAtTime(frequency, time) {
+        this.partials.forEach((o, index) => {
+            o.frequency.exponentialRampToValueAtTime(frequency * (index + 1), time);
+        });
+    }
+}
+
+var synth;
+
+nx.colors.black = "#ffffff"
+
+nx.onload = function() {
+    nx.colorize("fill", "#fff")
+    nx.colorize("accent", "#1b4806");
+
+    nx.widgets.tilt1.on('*', function(data) {
+        if (synth != null) {
+            synth.setFrequencyAtTime( data.y * 500, 0);
+        }
+    });
+};
+
+var isPlaying = false;
+var pauseSrc = 'data:image/svg+xml;base64,' + window.btoa(document.getElementById('pause').outerHTML);
+var playSrc = 'data:image/svg+xml;base64,' + window.btoa(document.getElementById('play').outerHTML);
+
+document.getElementById("play-button").addEventListener('click', function(e) {
+    var buttonImageSrc = this.firstElementChild.src;
+
+    if (isPlaying === true) {
+        isPlaying = false;
+        this.firstElementChild.src = playSrc;
+
+        synth.stop();
+
+    } else {
+        isPlaying = true;
+        this.firstElementChild.src = pauseSrc;
+
+        synth = new HarmonicSynth([1]);
+        synth.setFrequencyAtTime(200, 0);
+        synth.connect(audioCtx.destination);
+        synth.start();
+    }
+});
+</script>
+</body>
+</html>

@@ -45,13 +45,15 @@ body {
 
 .intro-bg-left {
 	background-color:$bg;
-	width:50%;
+	width:60%;
 	height:100%;
 	position:absolute;
 }
 
 .intro-bg-right {
-	width:50%;height:100vh;float:right;
+	width:40%;
+	height:100vh;
+	float:right;
 }
 
 iframe {
