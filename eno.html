@@ -161,7 +161,7 @@ let notes = {
 let audioContext = new (window.AudioContext || window.webkitAudioContext)();
 reverbjs.extend(audioContext);
 
-var reverbUrl = "http://reverbjs.org/Library/HamiltonMausoleum.m4a";
+var reverbUrl = "/assets/HamiltonMausoleum.m4a";
 var reverbNode = audioContext.createReverbFromUrl(reverbUrl, function() {
     reverbNode.connect(audioContext.destination);
 });
