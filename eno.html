@@ -4,8 +4,8 @@
     <meta charset="utf-8">
     <meta http-equiv="x-ua-compatible" content="ie=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="mobile-web-app-capable" content="yes">
     <title>ENO</title>
-    <meta name="description" content="">
     <style type="text/css">
 body {
     margin: 0;
@@ -14,10 +14,8 @@ body {
 #content {
     height: 100vh;
     background: linear-gradient(#350801, #a91904);
-}
-#content {
-    display: flex;
     height: 100vh;
+    display: flex;
     justify-content: center;
     align-items: center;
 }
@@ -34,10 +32,14 @@ button {
     cursor: pointer;
     padding: 0;
     float: left;
+    display: flex;
+    justify-content: center;
+    align-items: center;
 }
 button:hover {
     background-color: #000
 }
+
 /* The switch - the box around the slider */
 .switch {
     position: relative;
@@ -103,11 +105,16 @@ label {
     margin-left: 4px;
 }
 .rows {
-    width: 418px;
+    width: 370px;
 }
 .row {
     height: 44px;
     margin-bottom: 40px;
+}
+.centred {
+    display: flex;
+    justify-content: center;
+    padding-top: 40px;
 }
     </style>
 </head>
@@ -122,16 +129,18 @@ label {
                 <button onclick="playNote(notes.Eb3, 2)">E&#x266d;'</button>
                 <button onclick="playNote(notes.F3, 2)">F'</button>
                 <button onclick="playNote(notes.Ab3, 2)">A&#x266d;'</button>
-                <button id="play-button">
-                    <img id="play-icon" src="assets/play-white.svg"/>
-                 </button>
-             </div>
-             <div class="row">
+            </div>
+            <div class="row">
                  <label>REVERB</label>
                  <label class="switch">
                      <input id="add-reverb" type="checkbox" onclick="addReverb = this.checked">
                      <div class="slider round"></div>
                  </label>
+            </div>
+            <div class="row centred">
+                <button id="play-button" style="width:70px;height:70px;">
+                    <img id="play-icon" src="assets/play-white.svg"/>
+                 </button>
             </div>
         </div>
     </div>
@@ -178,7 +187,6 @@ document.getElementById("play-button").addEventListener('click', function(e) {
         this.firstElementChild.src = playSrc;
     } else {
         isPlaying = true;
-
         // start off notes to be played
         setTimeout(() => { playLoop(notes.F2, randomLoopLength()); }, 0);
         setTimeout(() => { playLoop(notes.Ab2, randomLoopLength()); }, 4000);
@@ -187,7 +195,6 @@ document.getElementById("play-button").addEventListener('click', function(e) {
         setTimeout(() => { playLoop(notes.Eb3, randomLoopLength()); }, 195000);
         setTimeout(() => { playLoop(notes.F3, randomLoopLength()); }, 16500);
         setTimeout(() => { playLoop(notes.Ab3, randomLoopLength()); }, 23000);
-
         this.firstElementChild.src = pauseSrc;
     }
 });
@@ -216,15 +223,14 @@ function randomLoopLength() {
 
 function playNote(freq, duration) {
     let source = audioContext.createOscillator();
-    let now = audioContext.currentTime;
+    let now = Number(audioContext.currentTime);
 
     source.type = 'sine';
-    source.frequency.setValueAtTime(freq, audioContext.currentTime);
+    source.frequency.setValueAtTime(freq, now);
 
     let amp = audioContext.createGain();
-    amp.gain.value = 0;
-    amp.gain.linearRampToValueAtTime(0.1, now + 1);
-    amp.gain.linearRampToValueAtTime(0, Number(now) + Number(duration));
+    amp.gain.value = 0.1;
+    amp.gain.linearRampToValueAtTime(0, now + Number(duration));
 
     if (addReverb === true) {
         source.connect(amp)
@@ -234,8 +240,8 @@ function playNote(freq, duration) {
         amp.connect(audioContext.destination);
     }
 
-    source.start();
-    source.stop(Number(now) + Number(duration) + 0.1);
+    source.start(now);
+    source.stop(now + Number(duration) + 0.1);
 }
 
 function play(freq) {
