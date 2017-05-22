@@ -6,7 +6,12 @@
         <title></title>
         <meta name="description" content="">
         <meta name="viewport" content="width=device-width, initial-scale=1">
-
+<style type="text/css">
+body {
+    margin: 0;
+    padding: 0;
+}
+</style>
         <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/0.5.7/p5.min.js"></script>
         <script>
         var MIC = (() => {
@@ -90,62 +95,57 @@
         var barSize = 5;
 
         function setup() {
-          createCanvas(800, 600, WEBGL)
-          MIC.init()
-          frameRate(10)
+            createCanvas(1200, 800, WEBGL)
+            MIC.init()
+            frameRate(10)
         }
 
         function draw() {
-          rotateX(0.8);
-          rotateY(-0.4);
-          orbitControl();
+            rotateX(0.8);
+            rotateY(-0.4);
+            orbitControl();
 
-          //background(25,25,25)
-          this.drawingContext.clearRect(0 , 0, w, h);
+            //background(25,25,25)
+            this.drawingContext.clearRect(0 , 0, w, h);
 
+            var dirY = (mouseY / height - 0.5) *2;
+            var dirX = (mouseX / width - 0.5) *2;
+            directionalLight(255, 255, 255, dirX, -dirY, 2.25);
+            ambientMaterial(0,0,200);
 
+            translate(-450, 100, 200);
+            var spec = MIC.getSpectrum();
+            if (spec.length > 0) {
+                specHistory.unshift(spec);
+                if (specHistory.length > 75) {
+                    specHistory.pop();
+                }
 
-          var dirY = (mouseY / height - 0.5) *2;
-          var dirX = (mouseX / width - 0.5) *2;
-          directionalLight(255, 255, 255, dirX, -dirY, 2.25);
-          ambientMaterial(0,0,200);
+                specHistory.forEach((s) => {
+                    translate(0, 0, -barSize * 2);
+                    push();
+                    beginShape()
+                    var i = 0
 
-          translate(-300, -100, 350);
-          var spec = MIC.getSpectrum();
-          if (spec.length > 0) {
-            specHistory.unshift(spec);
-            if (specHistory.length > 50) {
-              specHistory.pop();
+                    s.forEach((se) => {
+                        if (i < 75) {
+                            translate(barSize + 5, 0, 0);
+
+                            if (se > 0) {
+                                // align to common y
+                                push()
+                                translate(0, -se/2, 0)
+                                //vertex(se,0,0);
+                                box(barSize, se, barSize);
+                                pop();
+                            }
+                        }
+                        i++
+                    });
+                    endShape();
+                    pop();
+                });
             }
-
-            specHistory.forEach((s) => {
-              translate(0, 0, -barSize * 2);
-              push();
-              beginShape()
-              var i = 0
-              s.forEach((se) => {
-                if (i < 75) {
-                translate(barSize + 5, 0, 0);
-                push();
-                translate(0, -se/2, 0)
-                vertex(0,-se,0);
-                pop();
-
-                if (se > 0) {
-                  // align to common y
-                  push()
-                  translate(0, -se/2, 0)
-                  //vertex(se,0,0);
-                  box(barSize, se, barSize);
-                  pop();
-                }
-                }
-                i++
-              });
-              endShape();
-              pop();
-            });
-          }
         }
         </script>
     </head>
