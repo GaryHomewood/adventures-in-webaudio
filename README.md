@@ -3,7 +3,7 @@ Presentation/showcase of webaudio related creative tech.
 ## Resources
 
 - [JavaScript Systems Music](http://teropa.info/blog/2016/07/28/javascript-systems-music.html)  
-- [@webaudioweekly](https://twitter.com/webaud ioweekly)  
+- [@webaudioweekly](https://twitter.com/webaudioweekly)  
 - [Learn to Code Electronic Music Tools with Javascript](https://www.futurelearn.com/courses/electronic-music-tools)  
 - [NexusUI](http://www.nexusosc.com/)  HTML5 audio interface components  
 - [Using the mic to make sound reactive art](https://hackernoon.com/creative-coding-using-the-microphone-to-make-sound-reactive-art-part1-164fd3d972f3)
